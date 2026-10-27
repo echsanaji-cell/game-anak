@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;text-align:center">
+<h3>Pembuat Ikon</h3>
+<canvas id="c" style="width:256px;border:1px solid #ccc"></canvas><br><br>
+<button onclick="simpan(180)">Unduh 180</button>
+<button onclick="simpan(192)">Unduh 192</button>
+<button onclick="simpan(512)">Unduh 512</button>
+<script>
+function gambar(c, s) {
+  c.width = c.height = s;
+  const x = c.getContext("2d");
+  x.scale(s / 300, s / 300);
+  x.fillStyle = "#9be7ff"; x.fillRect(0, 0, 300, 300);
+  const o = (cx, cy, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); };
+  x.fillStyle = "#7c5cff";
+  x.beginPath(); x.moveTo(70, 85); x.lineTo(85, 22); x.lineTo(122, 66); x.fill();
+  x.beginPath(); x.moveTo(230, 85); x.lineTo(215, 22); x.lineTo(178, 66); x.fill();
+  x.beginPath(); x.ellipse(150, 172, 125, 115, 0, 0, 7); x.fill();
+  o(105, 122, 30, "#fff"); o(195, 122, 30, "#fff");
+  o(105, 122, 14, "#222"); o(195, 122, 14, "#222");
+  x.fillStyle = "#4a1038"; x.beginPath(); x.ellipse(150, 215, 64, 52, 0, 0, 7); x.fill();
+  x.fillStyle = "#ff7a8a"; x.beginPath(); x.ellipse(150, 245, 34, 16, 0, 0, 7); x.fill();
+}
+function simpan(s) {
+  const c = document.createElement("canvas");
+  gambar(c, s);
+  const a = document.createElement("a");
+  a.download = "icon-" + s + ".png";
+  a.href = c.toDataURL("image/png");
+  a.click();
+}
+gambar(document.getElementById("c"), 512);
+</script>
+</body>
+</html>

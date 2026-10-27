@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Beri Makan Monster</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Monster">
+<meta name="theme-color" content="#9be7ff">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; font-family: "Trebuchet MS", "Comic Sans MS", system-ui, sans-serif; }
+  body {
+    --mc: #7c5cff;
+    background: linear-gradient(#9be7ff, #d6f8c9 70%, #a8e6a1);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #app { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2vh 3vw; }
+
+  /* ATAS */
+  .atas { width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 80px; }
+  .modes { display: flex; gap: 14px; }
+  .modes button {
+    width: 76px; height: 76px; border-radius: 24px; border: 5px solid transparent; background: #fff;
+    font-size: 38px; box-shadow: 0 6px 0 rgba(0,0,0,.18); cursor: pointer;
+  }
+  .modes button.aktif { border-color: var(--mc); background: #fff6c9; }
+  .skor { background: #fff; border-radius: 30px; padding: 8px 22px; font-size: 40px; font-weight: 800; box-shadow: 0 6px 0 rgba(0,0,0,.18); }
+
+  /* BALON TARGET */
+  #bubble {
+    display: flex; align-items: center; gap: 20px; background: #fff; border-radius: 40px; padding: 0 5vw;
+    box-shadow: 0 10px 0 rgba(0,0,0,.15); cursor: pointer; border: 8px solid var(--mc);
+  }
+  #target { font-size: clamp(60px, 12vh, 120px); font-weight: 900; color: var(--mc); line-height: 1.15; }
+  #bubble .spk { font-size: clamp(36px, 6vh, 60px); }
+
+  /* MONSTER */
+  #monster { width: min(70vw, 44vh); height: auto; flex: none; overflow: visible; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  #monster.geleng { animation: geleng .6s; }
+  @keyframes geleng { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(9deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(6deg); } }
+  #monster.nyam { animation: nyam 1s; }
+  @keyframes nyam { 0%,100% { transform: scale(1); } 20% { transform: scale(1.12, .9); } 40% { transform: scale(.92, 1.1); } 60% { transform: scale(1.1, .92); } 80% { transform: scale(.96, 1.06); } }
+  #mulut { transform-box: fill-box; transform-origin: 50% 50%; transform: scaleY(.18); transition: transform .15s; }
+  #mulut.open { transform: scaleY(1); }
+  #mulut.chomp { animation: chomp 1s; }
+  @keyframes chomp { 0%,100% { transform: scaleY(.18); } 15% { transform: scaleY(1); } 30% { transform: scaleY(.18); } 45% { transform: scaleY(1); } 60% { transform: scaleY(.18); } 80% { transform: scaleY(.5); } }
+
+  /* KOTAK PILIHAN */
+  #tray { display: flex; gap: 4vw; justify-content: center; align-items: center; width: 100%; padding-bottom: 2vh; min-height: 200px; }
+  .tile {
+    width: clamp(110px, 18vh, 170px); height: clamp(110px, 18vh, 170px); border-radius: 36px; background: #fff;
+    border: 8px solid var(--c); color: var(--c); font-size: clamp(64px, 11vh, 110px); font-weight: 900;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 0 rgba(0,0,0,.18);
+    touch-action: none; position: relative; z-index: 1; cursor: grab;
+  }
+  .tile.drag { z-index: 50; box-shadow: 0 20px 25px rgba(0,0,0,.25); }
+  .tile.back { transition: transform .4s cubic-bezier(.3, 1.6, .5, 1); }
+  .tile.hint { animation: hint .7s infinite; }
+  @keyframes hint { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+  /* HUJAN BINTANG */
+  .jatuh { position: fixed; top: -80px; font-size: 56px; pointer-events: none; animation: jatuh linear forwards; z-index: 100; }
+  @keyframes jatuh { to { transform: translateY(115vh) rotate(360deg); } }
+
+  /* LAYAR MULAI */
+  #mulai {
+    position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vh;
+    background: linear-gradient(#9be7ff, #c9b6ff 60%, #ffc2e2);
+  }
+  #mulai h1 { margin: 0; font-size: clamp(40px, 8vw, 90px); color: #fff; text-shadow: 0 5px 0 rgba(0,0,0,.15); text-align: center; }
+  #mulai button {
+    width: min(60vw, 320px); height: min(60vw, 320px); border-radius: 50%; border: none; background: #ff7a59; color: #fff;
+    font-size: 120px; box-shadow: 0 14px 0 rgba(0,0,0,.2); cursor: pointer;
+  }
+  #mulai button:active { transform: translateY(10px); box-shadow: 0 4px 0 rgba(0,0,0,.2); }
+</style>
+</head>
+<body>
+
+<div id="mulai">
+  <h1>Beri Makan<br>Monster! 👾</h1>
+  <button id="btnMulai">▶️</button>
+</div>
+
+<div id="app">
+  <div class="atas">
+    <div class="modes">
+      <button data-mode="huruf">🔤</button>
+      <button data-mode="angka">🔢</button>
+      <button data-mode="campur" class="aktif">🎲</button>
+    </div>
+    <div class="skor">⭐ <span id="skor">0</span></div>
+  </div>
+
+  <div id="bubble"><span id="target"></span><span class="spk">🔊</span></div>
+
+  <svg id="monster" viewBox="0 0 300 300">
+    <polygon points="70,85 85,22 122,66" style="fill:var(--mc)"/>
+    <polygon points="230,85 215,22 178,66" style="fill:var(--mc)"/>
+    <circle cx="38" cy="205" r="24" style="fill:var(--mc)"/>
+    <circle cx="262" cy="205" r="24" style="fill:var(--mc)"/>
+    <ellipse cx="150" cy="172" rx="125" ry="115" style="fill:var(--mc)"/>
+    <ellipse cx="150" cy="225" rx="80" ry="55" fill="rgba(255,255,255,.2)"/>
+    <circle cx="105" cy="122" r="30" fill="#fff"/>
+    <circle cx="195" cy="122" r="30" fill="#fff"/>
+    <circle id="pL" cx="105" cy="122" r="14" fill="#222"/>
+    <circle id="pR" cx="195" cy="122" r="14" fill="#222"/>
+    <g id="mulut">
+      <ellipse cx="150" cy="215" rx="64" ry="52" fill="#4a1038"/>
+      <ellipse cx="150" cy="245" rx="34" ry="16" fill="#ff7a8a"/>
+      <polygon points="108,170 124,196 140,168" fill="#fff"/>
+      <polygon points="160,168 176,196 192,170" fill="#fff"/>
+    </g>
+  </svg>
+
+  <div id="tray"></div>
+</div>
+
+<script>
+  /* ====== DATA ====== */
+  const HURUF = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const ANGKA = Array.from({ length: 10 }, (_, i) => String(i + 1));
+  const KATA = { 1:"satu", 2:"dua", 3:"tiga", 4:"empat", 5:"lima", 6:"enam", 7:"tujuh", 8:"delapan", 9:"sembilan", 10:"sepuluh" };
+  const WARNA = ["#ff595e","#ff924c","#f4b400","#8ac926","#2ec4b6","#1982c4","#6a4c93","#e85d9e"];
+  const MONSTER = ["#7c5cff","#2ec4b6","#ff7a59","#e85d9e","#4caf50","#1982c4","#f4a300"];
+
+  const $ = (id) => document.getElementById(id);
+  const tray = $("tray"), monster = $("monster"), mulut = $("mulut");
+  let mode = "campur", tipe = "huruf", target = "", salah = 0, bintang = 0, terkunci = true, drag = null, warnaIdx = 0;
+
+  /* ====== SUARA ====== */
+  function bicara(teks) {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(teks);
+    u.lang = "id-ID"; u.rate = 0.85; u.pitch = 1.2;
+    speechSynthesis.speak(u);
+  }
+  let ac;
+  function audio() {
+    if (!ac) { const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
+    if (ac && ac.state === "suspended") ac.resume();
+  }
+  function nada(f1, f2, dur, jenis = "sine", vol = 0.2, delay = 0) {
+    if (!ac) return;
+    const t = ac.currentTime + delay;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = jenis;
+    o.frequency.setValueAtTime(f1, t);
+    o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur);
+  }
+  function suaraBenar() {
+    nada(300, 100, 0.1, "square", 0.12, 0);
+    nada(300, 100, 0.1, "square", 0.12, 0.25);
+    nada(160, 50, 0.5, "sawtooth", 0.18, 0.5);
+    [523, 659, 784].forEach((f, i) => nada(f, f, 0.25, "sine", 0.2, 1.0 + i * 0.12));
+  }
+  function suaraSalah() { nada(330, 170, 0.35, "triangle", 0.22); }
+
+  /* ====== EFEK ====== */
+  function hujan() {
+    const list = ["⭐", "🎉", "🎈", "✨", "🌟"];
+    for (let i = 0; i < 18; i++) {
+      const d = document.createElement("div");
+      d.className = "jatuh";
+      d.textContent = list[Math.floor(Math.random() * list.length)];
+      d.style.left = Math.random() * 92 + "vw";
+      d.style.animationDuration = (2 + Math.random() * 2) + "s";
+      d.style.animationDelay = (Math.random() * 0.6) + "s";
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 5000);
+    }
+  }
+  function animasi(el, kelas, ms) {
+    el.classList.remove(kelas);
+    void el.getBoundingClientRect();
+    el.classList.add(kelas);
+    setTimeout(() => el.classList.remove(kelas), ms);
+  }
+
+  /* ====== RONDE ====== */
+  const acak = (a) => [...a].sort(() => Math.random() - 0.5);
+
+  function ucapTarget() {
+    bicara(tipe === "huruf" ? `Beri makan monster huruf ${target}` : `Beri makan monster angka ${KATA[target]}`);
+  }
+
+  function ronde() {
+    tipe = mode === "campur" ? (Math.random() < 0.5 ? "huruf" : "angka") : mode;
+    const pool = tipe === "huruf" ? HURUF : ANGKA;
+    target = pool[Math.floor(Math.random() * pool.length)];
+    const lain = acak(pool.filter((x) => x !== target)).slice(0, 2);
+
+    warnaIdx = (warnaIdx + 1) % MONSTER.length;
+    document.body.style.setProperty("--mc", MONSTER[warnaIdx]);
+    $("target").textContent = target;
+
+    tray.innerHTML = "";
+    acak([target, ...lain]).forEach((v, i) => {
+      const el = document.createElement("div");
+      el.className = "tile";
+      el.textContent = v;
+      el.dataset.v = v;
+      el.style.setProperty("--c", WARNA[(i * 3 + Math.floor(Math.random() * 3)) % WARNA.length]);
+      pasangDrag(el);
+      tray.appendChild(el);
+    });
+
+    salah = 0;
+    terkunci = false;
+    setTimeout(ucapTarget, 300);
+  }
+
+  /* ====== MATA & MULUT ====== */
+  function lihat(x, y) {
+    const m = monster.getBoundingClientRect();
+    const cx = m.left + m.width / 2, cy = m.top + m.height * 0.4;
+    const a = Math.atan2(y - cy, x - cx);
+    const d = Math.min(9, Math.hypot(x - cx, y - cy) / 25);
+    const tx = Math.cos(a) * d, ty = Math.sin(a) * d;
+    $("pL").setAttribute("transform", `translate(${tx} ${ty})`);
+    $("pR").setAttribute("transform", `translate(${tx} ${ty})`);
+  }
+  function dekat(el) {
+    const r = el.getBoundingClientRect(), m = monster.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    return cx > m.left + m.width * 0.15 && cx < m.right - m.width * 0.15 && cy > m.top + m.height * 0.3 && cy < m.bottom + 20;
+  }
+
+  /* ====== DRAG ====== */
+  function pasangDrag(el) {
+    el.addEventListener("pointerdown", (e) => {
+      if (terkunci) return;
+      audio();
+      el.setPointerCapture(e.pointerId);
+      el.classList.remove("back", "hint");
+      el.classList.add("drag");
+      drag = { el, sx: e.clientX, sy: e.clientY };
+      e.preventDefault();
+    });
+    el.addEventListener("pointermove", (e) => {
+      if (!drag || drag.el !== el) return;
+      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      el.style.transform = `translate(${dx}px, ${dy}px) scale(1.15) rotate(${dx / 25}deg)`;
+      lihat(e.clientX, e.clientY);
+      mulut.classList.toggle("open", dekat(el));
+    });
+    const lepas = () => {
+      if (!drag || drag.el !== el) return;
+      drag = null;
+      el.classList.remove("drag");
+      if (dekat(el)) cek(el);
+      else { balik(el); mulut.classList.remove("open"); }
+    };
+    el.addEventListener("pointerup", lepas);
+    el.addEventListener("pointercancel", lepas);
+  }
+
+  function balik(el) {
+    el.classList.add("back");
+    el.style.transform = "";
+    setTimeout(() => el.classList.remove("back"), 450);
+  }
+
+  /* ====== JAWABAN ====== */
+  function cek(el) {
+    if (el.dataset.v === target) benar(el); else salahJawab(el);
+  }
+
+  function benar(el) {
+    terkunci = true;
+    el.style.opacity = 0;
+    mulut.classList.remove("open");
+    animasi(mulut, "chomp", 1000);
+    animasi(monster, "nyam", 1000);
+    suaraBenar();
+    bintang++;
+    $("skor").textContent = bintang;
+    setTimeout(() => {
+      hujan();
+      bicara(tipe === "huruf" ? `Hore! Huruf ${target}` : `Hore! ${KATA[target]}`);
+    }, 1100);
+    setTimeout(ronde, 3200);
+  }
+
+  function salahJawab(el) {
+    salah++;
+    mulut.classList.remove("open");
+    balik(el);
+    animasi(monster, "geleng", 600);
+    suaraSalah();
+    bicara("Bukan. Coba lagi ya!");
+    if (salah >= 2) {
+      [...tray.children].forEach((t) => { if (t.dataset.v === target) t.classList.add("hint"); });
+    }
+  }
+
+  /* ====== KONTROL ====== */
+  $("bubble").addEventListener("click", () => { audio(); ucapTarget(); });
+
+  document.querySelectorAll(".modes button").forEach((b) => {
+    b.addEventListener("click", () => {
+      audio();
+      mode = b.dataset.mode;
+      document.querySelectorAll(".modes button").forEach((x) => x.classList.toggle("aktif", x === b));
+      ronde();
+    });
+  });
+
+  $("btnMulai").addEventListener("click", () => {
+    audio();
+    $("mulai").style.display = "none";
+    ronde();
+  });
+
+  /* Cegah gulir dan zoom di iPad */
+  document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+  document.addEventListener("gesturestart", (e) => e.preventDefault());
+  /* Daftarkan service worker supaya bisa offline */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+  }
+</script>
+</body>
+</html>
