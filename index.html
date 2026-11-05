@@ -40,7 +40,7 @@
   #bubble .spk { font-size: clamp(36px, 6vh, 60px); }
 
   /* MONSTER */
-  #monster { width: min(70vw, 44vh); height: auto; flex: none; overflow: visible; animation: bob 2.2s ease-in-out infinite; }
+  #monster { width: min(55vw, 30vh); height: auto; flex: none; overflow: visible; animation: bob 2.2s ease-in-out infinite; }
   @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   #monster.geleng { animation: geleng .6s; }
   @keyframes geleng { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(9deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(6deg); } }
@@ -51,18 +51,25 @@
   #mulut.chomp { animation: chomp 1s; }
   @keyframes chomp { 0%,100% { transform: scaleY(.18); } 15% { transform: scaleY(1); } 30% { transform: scaleY(.18); } 45% { transform: scaleY(1); } 60% { transform: scaleY(.18); } 80% { transform: scaleY(.5); } }
 
-  /* KOTAK PILIHAN */
-  #tray { display: flex; gap: 4vw; justify-content: center; align-items: center; width: 100%; padding-bottom: 2vh; min-height: 200px; }
-  .tile {
-    width: clamp(110px, 18vh, 170px); height: clamp(110px, 18vh, 170px); border-radius: 36px; background: #fff;
-    border: 8px solid var(--c); color: var(--c); font-size: clamp(64px, 11vh, 110px); font-weight: 900;
+    /* TAMAN (TEMPAT PERSEMBUNYIAN) */
+  #taman { position: relative; flex: 1; width: 100%; min-height: 0; margin: 1vh 0 2vh; }
+  .spot { position: absolute; width: var(--u); height: var(--u); cursor: pointer; touch-action: manipulation; }
+  .isi {
+    position: absolute; inset: 0; border-radius: 30px; background: #fff;
+    border: 7px solid var(--c); color: var(--c); font-weight: 900; font-size: calc(var(--u) * .6);
     display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 0 rgba(0,0,0,.18);
-    touch-action: none; position: relative; z-index: 1; cursor: grab;
+    transform: scale(.2); opacity: 0;
+    transition: transform .35s cubic-bezier(.3, 1.6, .5, 1), opacity .2s;
   }
-  .tile.drag { z-index: 50; box-shadow: 0 20px 25px rgba(0,0,0,.25); }
-  .tile.back { transition: transform .4s cubic-bezier(.3, 1.6, .5, 1); }
-  .tile.hint { animation: hint .7s infinite; }
-  @keyframes hint { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+  .tutup {
+    position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
+    font-size: calc(var(--u) * .85); line-height: 1; filter: drop-shadow(0 6px 0 rgba(0,0,0,.15));
+    transition: transform .35s, opacity .3s;
+  }
+  .spot.buka .isi { transform: scale(1); opacity: 1; z-index: 3; }
+  .spot.buka .tutup { transform: translateY(-40%) rotate(-18deg) scale(.9); opacity: 0; }
+  .spot.hint .tutup { animation: goyangTutup .6s infinite; }
+  @keyframes goyangTutup { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-10deg) scale(1.08); } 75% { transform: rotate(10deg) scale(1.08); } }
 
   /* HUJAN BINTANG */
   .jatuh { position: fixed; top: -80px; font-size: 56px; pointer-events: none; animation: jatuh linear forwards; z-index: 100; }
@@ -119,7 +126,7 @@
     </g>
   </svg>
 
-  <div id="tray"></div>
+  <div id="taman"></div>
 </div>
 
 <script>
@@ -131,8 +138,9 @@
   const MONSTER = ["#7c5cff","#2ec4b6","#ff7a59","#e85d9e","#4caf50","#1982c4","#f4a300"];
 
   const $ = (id) => document.getElementById(id);
-  const tray = $("tray"), monster = $("monster"), mulut = $("mulut");
-  let mode = "campur", tipe = "huruf", target = "", salah = 0, bintang = 0, terkunci = true, drag = null, warnaIdx = 0;
+  const taman = $("taman"), monster = $("monster"), mulut = $("mulut");
+  let mode = "campur", tipe = "huruf", target = "", salah = 0, bintang = 0, terkunci = true, warnaIdx = 0;
+  let daftar = [], rondeId = 0;
 
   /* ====== SUARA ====== */
   function bicara(teks) {
@@ -195,30 +203,50 @@
     bicara(tipe === "huruf" ? `Beri makan monster huruf ${target}` : `Beri makan monster angka ${KATA[target]}`);
   }
 
+  const JUMLAH = 6;   // jumlah tempat persembunyian (kecilkan agar lebih mudah, misal 4)
+  const PENUTUP = ["🌳", "🌷", "🍄", "🌻", "🌵", "🌿", "🍂"];
+
   function ronde() {
+    rondeId++;
     tipe = mode === "campur" ? (Math.random() < 0.5 ? "huruf" : "angka") : mode;
     const pool = tipe === "huruf" ? HURUF : ANGKA;
     target = pool[Math.floor(Math.random() * pool.length)];
-    const lain = acak(pool.filter((x) => x !== target)).slice(0, 2);
+    const lain = acak(pool.filter((x) => x !== target)).slice(0, JUMLAH - 1);
 
     warnaIdx = (warnaIdx + 1) % MONSTER.length;
     document.body.style.setProperty("--mc", MONSTER[warnaIdx]);
     $("target").textContent = target;
 
-    tray.innerHTML = "";
-    acak([target, ...lain]).forEach((v, i) => {
-      const el = document.createElement("div");
-      el.className = "tile";
-      el.textContent = v;
-      el.dataset.v = v;
-      el.style.setProperty("--c", WARNA[(i * 3 + Math.floor(Math.random() * 3)) % WARNA.length]);
-      pasangDrag(el);
-      tray.appendChild(el);
-    });
-
     salah = 0;
     terkunci = false;
+    daftar = acak([target, ...lain]);
+    buatTaman(daftar);
     setTimeout(ucapTarget, 300);
+  }
+
+  function buatTaman(items) {
+    taman.innerHTML = "";
+    const W = taman.clientWidth, H = taman.clientHeight, n = items.length;
+    const kolom = W > H ? 4 : 3;
+    const baris = Math.ceil(n / kolom) + (W > H ? 0 : 1);
+    const cw = W / kolom, ch = H / baris;
+    const ukuran = Math.max(90, Math.min(170, Math.min(cw, ch) * 0.9));
+    const sel = acak([...Array(kolom * baris).keys()]).slice(0, n);
+
+    items.forEach((v, i) => {
+      const col = sel[i] % kolom, row = Math.floor(sel[i] / kolom);
+      const el = document.createElement("div");
+      el.className = "spot";
+      el.dataset.v = v;
+      el.style.setProperty("--u", ukuran + "px");
+      el.style.left = (col * cw + Math.max(0, cw - ukuran) * Math.random()) + "px";
+      el.style.top = (row * ch + Math.max(0, ch - ukuran) * Math.random()) + "px";
+      el.innerHTML =
+        `<div class="isi" style="--c:${WARNA[i % WARNA.length]}">${v}</div>` +
+        `<div class="tutup">${PENUTUP[Math.floor(Math.random() * PENUTUP.length)]}</div>`;
+      el.addEventListener("pointerdown", (e) => { e.preventDefault(); buka(el); });
+      taman.appendChild(el);
+    });
   }
 
   /* ====== MATA & MULUT ====== */
@@ -237,76 +265,74 @@
     return cx > m.left + m.width * 0.15 && cx < m.right - m.width * 0.15 && cy > m.top + m.height * 0.3 && cy < m.bottom + 20;
   }
 
-  /* ====== DRAG ====== */
-  function pasangDrag(el) {
-    el.addEventListener("pointerdown", (e) => {
-      if (terkunci) return;
-      audio();
-      el.setPointerCapture(e.pointerId);
-      el.classList.remove("back", "hint");
-      el.classList.add("drag");
-      drag = { el, sx: e.clientX, sy: e.clientY };
-      e.preventDefault();
-    });
-    el.addEventListener("pointermove", (e) => {
-      if (!drag || drag.el !== el) return;
-      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-      el.style.transform = `translate(${dx}px, ${dy}px) scale(1.15) rotate(${dx / 25}deg)`;
-      lihat(e.clientX, e.clientY);
-      mulut.classList.toggle("open", dekat(el));
-    });
-    const lepas = () => {
-      if (!drag || drag.el !== el) return;
-      drag = null;
-      el.classList.remove("drag");
-      if (dekat(el)) cek(el);
-      else { balik(el); mulut.classList.remove("open"); }
-    };
-    el.addEventListener("pointerup", lepas);
-    el.addEventListener("pointercancel", lepas);
+  /* ====== MENCARI ====== */
+  function buka(spot) {
+    if (terkunci || spot.classList.contains("buka")) return;
+    audio();
+    const v = spot.dataset.v;
+    spot.classList.remove("hint");
+    spot.classList.add("buka");
+    nada(300, 700, 0.12, "sine", 0.18);
+
+    if (v === target) { benar(spot); return; }
+
+    salah++;
+    bicara(tipe === "huruf" ? `Itu huruf ${v}. Cari lagi ya!` : `Itu angka ${KATA[v]}. Cari lagi ya!`);
+    setTimeout(() => spot.classList.remove("buka"), 1800);
+
+    if (salah >= 3) {
+      taman.querySelectorAll(".spot").forEach((s) => {
+        if (s.dataset.v === target && !s.classList.contains("buka")) s.classList.add("hint");
+      });
+    }
   }
 
-  function balik(el) {
-    el.classList.add("back");
-    el.style.transform = "";
-    setTimeout(() => el.classList.remove("back"), 450);
-  }
-
-  /* ====== JAWABAN ====== */
-  function cek(el) {
-    if (el.dataset.v === target) benar(el); else salahJawab(el);
-  }
-
-  function benar(el) {
+  function benar(spot) {
     terkunci = true;
-    el.style.opacity = 0;
-    mulut.classList.remove("open");
-    animasi(mulut, "chomp", 1000);
-    animasi(monster, "nyam", 1000);
-    suaraBenar();
-    bintang++;
-    $("skor").textContent = bintang;
+    const isi = spot.querySelector(".isi");
+    const id = rondeId;
+
+    // 1. huruf terbang ke mulut monster
+    setTimeout(() => {
+      const r = isi.getBoundingClientRect(), m = monster.getBoundingClientRect();
+      const dx = (m.left + m.width / 2) - (r.left + r.width / 2);
+      const dy = (m.top + m.height * 0.72) - (r.top + r.height / 2);
+      spot.style.zIndex = 60;
+      isi.style.transition = "transform .8s ease-in";
+      isi.style.transform = `translate(${dx}px, ${dy}px) scale(.25) rotate(360deg)`;
+      mulut.classList.add("open");
+    }, 700);
+
+    // 2. monster mengunyah
+    setTimeout(() => {
+      isi.style.transition = "opacity .2s";
+      isi.style.opacity = 0;
+      mulut.classList.remove("open");
+      animasi(mulut, "chomp", 1000);
+      animasi(monster, "nyam", 1000);
+      suaraBenar();
+      bintang++;
+      $("skor").textContent = bintang;
+    }, 1500);
+
+    // 3. perayaan
     setTimeout(() => {
       hujan();
       bicara(tipe === "huruf" ? `Hore! Huruf ${target}` : `Hore! ${KATA[target]}`);
-    }, 1100);
-    setTimeout(ronde, 3200);
-  }
+    }, 2900);
 
-  function salahJawab(el) {
-    salah++;
-    mulut.classList.remove("open");
-    balik(el);
-    animasi(monster, "geleng", 600);
-    suaraSalah();
-    bicara("Bukan. Coba lagi ya!");
-    if (salah >= 2) {
-      [...tray.children].forEach((t) => { if (t.dataset.v === target) t.classList.add("hint"); });
-    }
+    // 4. ronde berikutnya
+    setTimeout(() => { if (id === rondeId) ronde(); }, 5000);
   }
 
   /* ====== KONTROL ====== */
   $("bubble").addEventListener("click", () => { audio(); ucapTarget(); });
+
+  /* Mata monster mengikuti sentuhan */
+  document.addEventListener("pointerdown", (e) => lihat(e.clientX, e.clientY));
+
+  /* Susun ulang taman kalau layar diputar */
+  window.addEventListener("resize", () => { if (!terkunci) buatTaman(daftar); });
 
   document.querySelectorAll(".modes button").forEach((b) => {
     b.addEventListener("click", () => {
